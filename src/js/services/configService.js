@@ -118,6 +118,14 @@ angular.module('copayApp.services').factory('configService', function(storageSer
 	// hidden assets: key = wallet id, value = set of assets (string: boolean)
 	hiddenAssets: {},
 
+	continuousBackup: {
+		backgroundTurnedOn: false,
+		type: null,
+	},
+
+	// cloud storages: key = storage id, value = object of properties (title, clientId, clientSecret)
+	cloudStorages: {},
+
 	rates: {
 	  url: 'https://insight.bitpay.com:443/api/rates',
 	},
@@ -243,6 +251,12 @@ angular.module('copayApp.services').factory('configService', function(storageSer
 		}
 		if (!_config.hiddenAssets) {
 			_config.hiddenAssets = defaultConfig.hiddenAssets;
+		}
+		if (!_config.continuousBackup) {
+			_config.continuousBackup = defaultConfig.continuousBackup;
+		}
+		if (!_config.cloudStorages) {
+			_config.cloudStorages = defaultConfig.cloudStorages;
 		}
 		if (!_config.deviceName)
 			_config.deviceName = defaultConfig.getDeviceName();
