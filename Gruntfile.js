@@ -195,8 +195,8 @@ module.exports = function(grunt) {
       linux: {
 		options: {timestamp: true, mode: true},
         files: [
-          {expand: true, cwd: './webkitbuilds/', src: ['obyte.desktop', '../public/img/icons/logo-circle.ico', '../public/img/icons/logo-circle-256.png'], dest: '../obytebuilds/Obyte-TN/linux32/', flatten: true, filter: 'isFile', options: {timestamp: true, mode: true} },
-          {expand: true, cwd: './webkitbuilds/', src: ['obyte.desktop', '../public/img/icons/logo-circle.ico', '../public/img/icons/logo-circle-256.png'], dest: '../obytebuilds/Obyte-TN/linux64/', flatten: true, filter: 'isFile', options: {timestamp: true, mode: true} },
+          {expand: true, cwd: './webkitbuilds/', src: ['obyte.desktop', '../public/img/icons/logo-circle.ico', '../public/img/icons/logo-circle-256.png', '../.env'], dest: '../obytebuilds/Obyte-TN/linux32/', flatten: true, filter: 'isFile', options: {timestamp: true, mode: true} },
+          {expand: true, cwd: './webkitbuilds/', src: ['obyte.desktop', '../public/img/icons/logo-circle.ico', '../public/img/icons/logo-circle-256.png', '../.env'], dest: '../obytebuilds/Obyte-TN/linux64/', flatten: true, filter: 'isFile', options: {timestamp: true, mode: true} },
         ],
       }
     },
@@ -258,7 +258,7 @@ module.exports = function(grunt) {
         },
         expand: true,
         cwd: '../obytebuilds/Obyte-TN/linux32/',
-        src: ['**/*'],
+        src: ['**/*', '.env'],
         dest: 'obyte-tn-linux32/'
       },
       linux64: {
@@ -267,7 +267,7 @@ module.exports = function(grunt) {
         },
         expand: true,
         cwd: '../obytebuilds/Obyte-TN/linux64/',
-        src: ['**/*'],
+        src: ['**/*', '.env'],
         dest: 'obyte-tn-linux64/'
       }
     },
