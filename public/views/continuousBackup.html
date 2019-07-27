@@ -1,0 +1,78 @@
+<div
+		class="topbar-container"
+		ng-include="'views/includes/topbar.html'"
+		ng-init="titleSection='Continuous backup'; goBackToState = true">
+</div>
+
+<div class="content preferences" ng-controller="continuousBackupCtrl">
+	<h4></h4>
+
+	<div class="onGoingProcess" ng-show="exporting">
+		<div class="onGoingProcess-content" ng-style="{'background-color':index.backgroundColor}">
+			<div class="spinner">
+				<div class="rect1"></div>
+				<div class="rect2"></div>
+				<div class="rect3"></div>
+				<div class="rect4"></div>
+				<div class="rect5"></div>
+			</div>
+			<span translate> Exporting... </span>
+		</div>
+	</div>
+	<div>
+		<div class="text-warning size-14 m20b" ng-show="error">
+			<i class="fi-alert size-12"></i>
+			<span translate> Failed to export: {{ error }} </span>
+		</div>
+		
+		<form>
+			<table class="cloud-storages-list">
+				<tr class="cloud-storages-list__item cloud-storages-item" ng-click="setActiveCloudStorage(null)">
+					<td class="cloud-storages-item__selector-holder">
+						<input type="radio" class="cloud-storages-item__selector" name="storage_type"
+							id="storage_type_null"
+							ng-value="null" ng-checked="checkCloudStorageActive(null)"/>
+					</td>
+					<td class="cloud-storages-item__content">
+						<div class="cloud-storages-item__title">Not selected</div>
+					</td>
+				</tr>
+				<tr class="cloud-storages-list__item cloud-storages-item"
+					ng-repeat="(key, cloudStorage) in cloudStorages" ng-click="setActiveCloudStorage(key)">
+					<td class="cloud-storages-item__selector-holder">
+						<input type="radio" class="cloud-storages-item__selector" name="storage_type"
+							id="storage_type_{{key}}"
+							ng-value="key" ng-checked="checkCloudStorageActive(key)"/>
+					</td>
+					<td class="cloud-storages-item__content">
+						<div class="cloud-storages-item__title">{{cloudStorage.getTitle()}}</div>
+						<div class="cloud-storages-item__account-holder"
+							ng-class="{'cloud-storages-item__account-holder--active': cloudStorage.isAuthenticated()}">
+							<div class="cloud-storages-item__account-name">{{cloudStorage.getAccountName()}}</div>
+						</div>
+						<div class="cloud-storages-item__btn-logout" ng-if="checkCloudStorageLogedIn(key)">
+							<button ng-click="logoutCloudStorage(key); $event.stopPropagation();">x</button>
+						</div>
+					</td>
+				</tr>
+			</table>
+
+			<div class="row">
+				<div class="columns">
+					<button class="black round expand m20t" ng-click="walletExport()"
+						ng-disabled="isBackupDisabled()"
+						ng-style="{'background-color':index.backgroundColor}">
+						<i class="fi-download"></i><span translate>Export now</span>
+					</button>
+				</div>
+			</div>
+		</form>
+		<div class="text-alert size-12 columns">
+			<span translate>WARNING:</span>
+			<ul class="warnings">
+				<li translate>If you plan to restore the wallet on another device, stop using it on the current one immediately after creating the backup.  Never clone wallets.  If you need access from several devices, use multisig.</li>
+			</ul>
+		</div>
+	</div>
+</div>
+<div class="extra-margin-bottom"></div>

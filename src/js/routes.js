@@ -481,6 +481,17 @@ angular
 		      }
 	      }
       })
+      .state('preferencesGlobal.continuousBackup', {
+        url: '/continuousBackup',
+	      templateUrl: 'views/continuousBackup.html',
+	      walletShouldBeComplete: true,
+	      needProfile: true,
+	      views: {
+		      'main@': {
+			      templateUrl: 'views/continuousBackup.html'
+		      }
+	      }
+      })
       .state('preferencesGlobal.export', {
         url: '/export',
         templateUrl: 'views/export.html',
