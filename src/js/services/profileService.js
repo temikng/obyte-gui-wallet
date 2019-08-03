@@ -4,8 +4,13 @@ var breadcrumbs = require('ocore/breadcrumbs.js');
 var constants = require('ocore/constants.js');
 
 angular.module('copayApp.services')
-  .factory('profileService', function profileServiceFactory($rootScope, $location, $timeout, $filter, $log, lodash, storageService, bwcService, configService, pushNotificationsService, isCordova, gettext, gettextCatalog, nodeWebkit, uxLanguage) {
+  .factory('profileService', ProfileServiceFactory);
 
+function ProfileServiceFactory(
+  $rootScope, $location, $timeout, $filter, $log,
+  lodash, storageService, bwcService, configService, pushNotificationsService, isCordova, gettext, gettextCatalog,
+  nodeWebkit, uxLanguage, continuousBackupService
+) {
     var root = {};
 
     root.profile = null;
@@ -171,6 +176,7 @@ angular.module('copayApp.services')
                 if (!root.focusedClient.credentials.xPrivKey)
                     throw Error("xPrivKey still not set after unlock");
                 console.log('unlocked: '+root.focusedClient.credentials.xPrivKey);
+                continuousBackupService.setBackupPrivateKey(root.focusedClient.credentials.xPrivKey);
                 var config = configService.getSync();
                 root.focusedClient.initDeviceProperties(
                     root.focusedClient.credentials.xPrivKey, root.profile.my_device_address, config.hub, config.deviceName);
@@ -204,9 +210,11 @@ angular.module('copayApp.services')
                         unlockWalletAndInitDevice();
                         device.setDeviceAddress(root.profile.my_device_address);
                     }
-                    else if (root.profile.xPrivKey)
+                    else if (root.profile.xPrivKey) {
+                        console.log('priv key is not encrypted');
                         root.focusedClient.initDeviceProperties(profile.xPrivKey, root.profile.my_device_address, config.hub, config.deviceName);
-                    else
+                        continuousBackupService.setBackupPrivateKey(profile.xPrivKey);
+                    } else
                         throw Error("neither xPrivKey nor xPrivKeyEncrypted");
                     //var tempDeviceKey = device.genPrivKey();
                     //saveTempKeys(tempDeviceKey, null, function(){});
@@ -789,4 +797,4 @@ angular.module('copayApp.services')
 
 
     return root;
-  });
+}
