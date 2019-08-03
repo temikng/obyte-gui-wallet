@@ -5,8 +5,8 @@ angular.module('copayApp.controllers')
 
 function ContinuousBackupCtrl(
 	$rootScope, $scope, $timeout, configService,
-	isCordova,
-	cloudsStoragesService
+	isCordova, gettextCatalog, notification,
+	cloudsStoragesService, continuousBackupService
 ) {
 	const config = configService.getSync();
 
@@ -23,21 +23,25 @@ function ContinuousBackupCtrl(
 	for (const key in $scope.cloudStorages) {
 		const cloudStorage = $scope.cloudStorages[key];
 		cloudStorage.on(CloudStorageEvents.ChangedAuthStatus, handleCloudStorageChangedAuthStatus);
-		cloudStorage.on(CloudStorageEvents.Inited, function () {
-			$scope.$apply();
-		});
+		cloudStorage.once(CloudStorageEvents.Inited, handleUpdateScope);
 	}
 
 	$scope.$on('$destroy', function () {
 		for (const key in $scope.cloudStorages) {
 			const cloudStorage = $scope.cloudStorages[key];
 			cloudStorage.removeListener(CloudStorageEvents.ChangedAuthStatus, handleCloudStorageChangedAuthStatus);
+			cloudStorage.removeListener(CloudStorageEvents.Inited, handleUpdateScope);
 		}
 	});
 
-	function handleCloudStorageChangedAuthStatus() {
-		console.log('ContinuousBackupCtrl handleCloudStorageChangedAuthStatus');
+	function handleUpdateScope() {
+    console.log('RecoveryCloudFileChooserCtrl handleUpdateScope');
 		$scope.$apply();
+	}
+
+	function handleCloudStorageChangedAuthStatus() {
+		handleUpdateScope();
+		console.log('ContinuousBackupCtrl handleCloudStorageChangedAuthStatus', $scope.activeCloudStorageKey);
 		saveConfig();
 	}
 
@@ -62,6 +66,7 @@ function ContinuousBackupCtrl(
 			saveConfig();
 			return;
 		}
+
 		return cloudStorage.authorizationAccount()
 			.then(function (bIsAuthenticated) {
 				console.log('ContinuousBackupCtrl onChange authorizationAccount', key, bIsAuthenticated);
@@ -122,7 +127,7 @@ function ContinuousBackupCtrl(
 	});
 	
 	$scope.isBackupDisabled = function () {
-		return $scope.exporting || !$scope.dirPath;
+		return $scope.exporting || !$scope.activeCloudStorageKey;
 	};
 
 	$scope.isTurnOnBackupBtnDisabled = function () {
@@ -139,21 +144,21 @@ function ContinuousBackupCtrl(
 		$scope.error = '';
 		$scope.exporting = true;
 
-		// continuousBackupService.doBackup('export-now', function (err) {
-		// 	$scope.exporting = false;
-		// 	if (err) {
-		// 		$scope.error = err;
-		// 		return;
-		// 	}
+		continuousBackupService.doCloudBackup('export-now', function (err) {
+			$scope.exporting = false;
+			if (err) {
+				$scope.error = err;
+				return;
+			}
 
-		// 	$timeout(function () {
-		// 		$rootScope.$apply();
-		// 		notification.success(
-		// 			gettextCatalog.getString('Success'),
-		// 			gettextCatalog.getString('Export completed successfully', {})
-		// 		);
-		// 	});
-		// });
+			$timeout(function () {
+				$rootScope.$apply();
+				notification.success(
+					gettextCatalog.getString('Success'),
+					gettextCatalog.getString('Export completed successfully', {})
+				);
+			});
+		});
 	}
 
 	function saveConfig(cb) {
