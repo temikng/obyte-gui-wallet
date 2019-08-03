@@ -10,7 +10,16 @@ var breadcrumbs = require('ocore/breadcrumbs.js');
 var Bitcore = require('bitcore-lib');
 var EventEmitter = require('events').EventEmitter;
 
-angular.module('copayApp.controllers').controller('indexController', function($rootScope, $scope, $log, $filter, $timeout, lodash, go, profileService, configService, isCordova, storageService, addressService, gettext, gettextCatalog, amMoment, nodeWebkit, addonManager, txFormatService, uxLanguage, $state, isMobile, addressbookService, notification, animationService, $modal, bwcService, backButton, pushNotificationsService, aliasValidationService, bottomBarService) {
+angular.module('copayApp.controllers')
+  .controller('indexController', IndexController);
+
+function IndexController(
+  $rootScope, $scope, $log, $filter, $timeout,
+  lodash, go, profileService, configService, isCordova, storageService, addressService, gettext, gettextCatalog,
+  amMoment, nodeWebkit, addonManager, txFormatService, uxLanguage, $state, isMobile, addressbookService, notification,
+  animationService, $modal, bwcService, backButton, pushNotificationsService, aliasValidationService, bottomBarService,
+  continuousBackupService
+) {
   breadcrumbs.add('index.js');
   var self = this;
   self.BLACKBYTES_ASSET = constants.BLACKBYTES_ASSET;
@@ -290,22 +299,24 @@ angular.module('copayApp.controllers').controller('indexController', function($r
         });
     });
 
-    /*
     eventBus.on("transaction_sent", function(){
         self.updateAll();
         self.updateTxHistory();
-    });*/
+        continuousBackupService.doBackupInBackground('transaction_sent');
+    });
 
     eventBus.on("new_my_transactions", function(){
-		breadcrumbs.add('new_my_transactions');
+		    breadcrumbs.add('new_my_transactions');
         self.updateAll();
         self.updateTxHistory();
+        continuousBackupService.doBackupInBackground('new_my_transactions');
     });
 
     eventBus.on("my_transactions_became_stable", function(){
-		breadcrumbs.add('my_transactions_became_stable');
+		    breadcrumbs.add('my_transactions_became_stable');
         self.updateAll();
         self.updateTxHistory();
+        continuousBackupService.doBackupInBackground('my_transactions_became_stable');
     });
 
     eventBus.on("maybe_new_transactions", function(){
@@ -1854,4 +1865,4 @@ angular.module('copayApp.controllers').controller('indexController', function($r
 			}
 		}, false);
 	})();
-});
+}
