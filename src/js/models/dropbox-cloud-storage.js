@@ -1,4 +1,4 @@
-class DropboxCloudStorage extends CloudStorage {
+class DropboxCloudStorage extends AbstractCloudStorage {
   constructor (options) {
     super({
       ...options,
@@ -15,12 +15,12 @@ class DropboxCloudStorage extends CloudStorage {
   }
 
   initDropboxWithClientId() {
-    this.dbx = new this.DropboxModule({ clientId: this._clientId, fetch: this.http });
+    this.dbx = new this.DropboxModule({ clientId: this._clientId, fetch: this._fetchModule });
   }
 
   initDropboxWithAccessToken() {
     console.log('DropboxCloudStorage initDropboxWithAccessToken', this._accessTokenData.accessToken);
-    this.dbx = new this.DropboxModule({ accessToken: this._accessTokenData.accessToken, fetch: this.http });
+    this.dbx = new this.DropboxModule({ accessToken: this._accessTokenData.accessToken, fetch: this._fetchModule });
   }
 
   init(options) {
@@ -109,17 +109,17 @@ class DropboxCloudStorage extends CloudStorage {
   }
 
   uploadFile(filename, data) {
-    var buffer = Buffer.from(data, /*'base64'*/'utf-8');
+    console.log('DropboxCloudStorage uploadFile', filename, data);
     return this.dbx.filesUpload({
       path: '/' + filename,
-      contents: buffer,
-      mode:'overwrite'
+      contents: data,
+      mode: 'overwrite'
     });
   }
 
   downloadFile(filename) {
     return this.dbx.filesDownload({
-      path: '/' + filename,
+      path: filename,
     });
   }
 }

@@ -1,4 +1,3 @@
-// import { EventEmitter } from 'events';
 var EventEmitter = require('events').EventEmitter;
 
 class CloudStorageEvents {
@@ -11,7 +10,7 @@ class CloudStorageEvents {
   static get AuthAnswer() { return 'event:auth_answer'; }
 }
 
-class CloudStorage extends EventEmitter {
+class AbstractCloudStorage extends EventEmitter {
   constructor (options) {
     super();
     this.log = options.log || function () {};
@@ -35,9 +34,9 @@ class CloudStorage extends EventEmitter {
     if ('isCordova' in options) {
       this._isCordova = options.isCordova;
     }
-    if ('fetchModule' in options) {
-      this._fetchModule = options.fetchModule;
-    }
+    // if ('fetchModule' in options) {
+    //   this._fetchModule = options.fetchModule;
+    // }
     this.lodash = require('lodash');
     this.axios = require('axios');
     this.querystring = require('querystring');
@@ -91,7 +90,10 @@ class CloudStorage extends EventEmitter {
   }
 
   getAuthorizationWindowOptions() {
-    return this._authorizationWindowOptions || {};
+    return this._authorizationWindowOptions || {
+      title: 'oauth',
+      frame: true,
+    };
   }
 
   getDataToSave() {
@@ -138,7 +140,7 @@ class CloudStorage extends EventEmitter {
           this.handleServerAuthReq(parsedUrl)
             .then((isAuth) => {
               resolve(isAuth);
-              console.log('CloudStorages handle auth req end', type, isAuth);
+              console.log('CloudStorage handle auth req end', type, isAuth);
             });
         }
       });
@@ -161,35 +163,43 @@ class CloudStorage extends EventEmitter {
     });
   }
   _authorizationWithNW() {
+    // this.emit(CloudStorageEvents.AuthAnswer, false);
     return new Promise((resolve, reject) => {
       const gui = require('nw.gui');
       console.log('CloudStorage _authorizationWithNW');
-      gui.Shell.openExternal(this.getAuthCodeUrl());
-      // TODO: This method does not work correctly. I don't know why :(
-      // gui.Window.open(
-      //   this.getAuthCodeUrl(),
-      //   this.getAuthorizationWindowOptions(),
-      //   (win) => {
-      //     if (!win) {
-      //       reject(new Error('The authorization window does not open correct!'));
-      //       return;
-      //     }
+
+      // gui.Shell.openExternal(this.getAuthCodeUrl());
+      // this.once(CloudStorageEvents.AuthAnswer, (isAuth) => {
+      //   console.log('CloudStorage _authorizationWithNW on AuthAnswer', isAuth);
+      //   resolve(isAuth);
+      // });
+
+      // TODO: This method does not work with proxy :(
+      gui.Window.open(
+        this.getAuthCodeUrl(),
+        this.getAuthorizationWindowOptions(),
+        (win) => {
+          if (!win) {
+            reject(new Error('The authorization window does not open correct!'));
+            return;
+          }
 
           this.once(CloudStorageEvents.AuthAnswer, (isAuth) => {
             console.log('CloudStorage _authorizationWithNW on AuthAnswer', isAuth);
             resolve(isAuth);
-            // win.close();
+
+            win.close();
           });
-      //     this._authorizationWindow = win;
-      //     win.on('close', () => {
-      //       this._authorizationWindow = null;
-      //       console.log('CloudStorage _authorizationWindow on close');
-      //       win.close(true);
-      //       resolve(false);
-      //     });
-      //     // win.showDevTools();
-      //   }
-      // );
+          this._authorizationWindow = win;
+          win.on('close', () => {
+            this._authorizationWindow = null;
+            console.log('CloudStorage _authorizationWindow on close');
+            win.close(true);
+            resolve(false);
+          });
+          // win.showDevTools();
+        }
+      );
     });
   }
 
