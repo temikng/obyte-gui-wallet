@@ -492,6 +492,17 @@ angular
 		      }
 	      }
       })
+      .state('preferencesGlobal.recovery', {
+        url: '/recovery',
+	      templateUrl: 'views/recovery.html',
+	      walletShouldBeComplete: true,
+	      needProfile: true,
+	      views: {
+		      'main@': {
+			      templateUrl: 'views/recovery.html'
+		      }
+	      }
+      })
       .state('preferencesGlobal.export', {
         url: '/export',
         templateUrl: 'views/export.html',
