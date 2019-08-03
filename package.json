@@ -30,7 +30,7 @@
     "java": false,
     "plugin": false
   },
-  "chromium-args": "--proxy-server=http://127.1.2.7 --password-store=basic --disable-password-generation",
+  "chromium-args": "--password-store=basic --disable-password-generation",
   "homepage": "https://github.com/byteball/obyte-gui-wallet",
   "license": "MIT",
   "repository": {
