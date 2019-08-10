@@ -120,8 +120,8 @@ angular.module('copayApp.services').factory('configService', function(storageSer
 	hiddenAssets: {},
 
 	continuousBackup: {
-		backgroundTurnedOn: false,
-		type: null,
+		localPath: null,
+		type: null
 	},
 
 	// cloud storages: key = storage id, value = object of properties (title, clientId, clientSecret)
