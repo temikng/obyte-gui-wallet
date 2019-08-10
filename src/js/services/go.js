@@ -409,7 +409,7 @@ if (window.cordova){
 }
 
 window.onerror = function(msg, url, line, col, error){
-	console.log("onerror");
+	console.log(`onerror: ${msg}, url: ${url}, line: ${line}, col: ${col}, error: ${error}`);
 	eventBus.emit('uncaught_error', "Javascript error: "+msg, error);
 };
 
