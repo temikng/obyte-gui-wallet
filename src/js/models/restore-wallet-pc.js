@@ -1,90 +1,94 @@
 class RestoreWalletPC extends AbstractRestoreWallet {
   constructor (options, services) {
     super(options, services);
-    this.zipModule = new require('jszip')();
   }
 
   loadFile(cb) {
-    console.log('RestoreWalletPC loadFile', this._file);
+    var fs = require('fs');
+    var path = require('path');
+    var pathToFile = path.resolve(this._file.path);
+    var data = fs.createReadStream(pathToFile);
 
-    new Promise((resolve, reject) => {
-      let blob = this._file.fileBlob;
-          blob.name = this._file.name;
-      const reader = new FileReader();
-      reader.onerror = function (event) {
-        reader.abort();
-        reject(event);
-      };
-      // This fires after the blob has been read/loaded.
-      reader.onloadend = function (e) {
-        const fileBuffer = Buffer.from(new Uint8Array(e.srcElement.result));
-        resolve(fileBuffer);
-      };
-      reader.readAsArrayBuffer(blob);
-    })
-      .then((fileBuffer) => this.zipModule.loadAsync(this._decrypt(fileBuffer, this._password)))
-      .then((zip) => {
-        console.log('RestoreWalletPC loadFile zip', zip);
-        if (!zip.file('light')) {
-          throw Error('Mobile version supports only light wallets.');
+    var unzip = require('unzip');
+    data.pipe(this._getDecipher())
+      .pipe(
+        unzip.Extract({ path: this._services.fileSystem.getDatabaseDirPath() + '/temp/' })
+      )
+      .on('error', (err) => {
+        if (err.message === "Invalid signature in zip file") {
+          cb('Incorrect password or file');
+        } else {
+          cb(err);
         }
-        this.zip = zip;
-        cb();
       })
-      .catch(cb);
+      .on('finish', () => {
+        setTimeout(cb, 100);
+      });
   }
-
   restoreFileData(cb) {
-    const zip = this.zip;
-    const async = require('async');
-    // const conf = require('ocore/conf');
-    const fileSystemService = this._services.fileSystem;
-    const storageService = this._services.storage;
-    const dbDirPath = fileSystemService.getDatabaseDirPath() + '/';
-    console.log('RestoreWalletPC restoreFileData', dbDirPath);
-    
-    async.forEachOfSeries(zip.files, (objFile, key, callback) => {
-      console.log('RestoreWalletPC forEachOfSeries', key);
-      if (key === 'profile') {
-        zip.file(key).async('string').then((data) => {
-          storageService.storeProfile(Profile.fromString(data), callback);
+    var async = require('async');
+    var conf = require('ocore/conf');
+    var fileSystemService = this._services.fileSystem;
+    var storageService = this._services.storage;
+    var dbDirPath = fileSystemService.getDatabaseDirPath() + '/';
+    var tempDirPath = dbDirPath + 'temp/';
+    async.series([
+      (callback) => {
+        fileSystemService.readFile(tempDirPath + 'profile', (err, data) => {
+          if(err) return callback(err);
+          storageService.storeProfile(Profile.fromString(data.toString()), callback)
           storageService.storeProfile = () => {};
         });
-      }
-      else if (key === 'config') {
-        zip.file(key).async('string').then((data) => {
-          storageService.storeConfig(data, callback);
+      },
+      (callback) => {
+        fileSystemService.readFile(tempDirPath + 'config', (err, data) => {
+          if(err) return callback(err);
+          storageService.storeConfig(data.toString(), callback);
           storageService.storeConfig = () => {};
         });
-      }
-      else if (/\.sqlite/.test(key)) {
-        zip.file(key).async('nodebuffer').then((data) => {
-          fileSystemService.nwWriteFile(dbDirPath + key, data, callback);
+      },
+      (callback) => {
+        fileSystemService.readdir(tempDirPath, (err, fileNames) => {
+          if(err) return callback(err);
+          fileNames = fileNames.filter((name) => /\.sqlite/.test(name));
+          async.forEach(fileNames, (name, callback2) => {
+            fileSystemService.nwMoveFile(tempDirPath + name, dbDirPath + name, callback2);
+          }, (err) => {
+            if(err) return callback(err);
+            callback();
+          })
+        });
+      },
+      (callback) => {
+        var existsConfJson = fileSystemService.nwExistsSync(tempDirPath + 'conf.json');
+        var existsLight = fileSystemService.nwExistsSync(tempDirPath + 'light');
+        if (existsConfJson) {
+          fileSystemService.nwMoveFile(tempDirPath + 'conf.json', dbDirPath + 'conf.json', callback);
+        } else if(existsLight && !existsConfJson) {
+          fileSystemService.nwWriteFile(dbDirPath + 'conf.json', JSON.stringify({bLight: true}, null, '\t'), callback);
+        } else if(!existsLight && conf.bLight) {
+          var _conf = require(dbDirPath + 'conf.json');
+          _conf.bLight = false;
+          fileSystemService.nwWriteFile(dbDirPath + 'conf.json', JSON.stringify(_conf, null, '\t'), callback);
+        } else {
+          callback();
+        }
+      },
+      (callback) => {
+        fileSystemService.readdir(tempDirPath, (err, fileNames) => {
+          if(err) return callback(err);
+          async.forEach(fileNames, (name, callback2) => {
+            fileSystemService.nwUnlink(tempDirPath + name, callback2);
+          }, (err) => {
+            if(err) return callback(err);
+            fileSystemService.nwRmDir(tempDirPath, () => {
+              callback();
+            });
+          })
         });
       }
-      else if (key === 'conf.json') {
-        zip.file(key).async('nodebuffer').then((data) => {
-          fileSystemService.nwWriteFile(dbDirPath + key, data, callback);
-        });
-      }
-      else {
-        callback();
-      }
-    }, (err) => {
-      if (err) return cb(err);
-      return cb();
+    ], (err) => {
+      cb(err);
     });
-  }
-
-  _decrypt(buffer, password) {
-    password = Buffer.from(password);
-    const decipher = this._getDecipher();
-    const CHUNK_LENGTH = 2003;
-    let arrChunks = [];
-    for (let offset = 0; offset < buffer.length; offset += CHUNK_LENGTH) {
-      arrChunks.push(decipher.update(buffer.slice(offset, Math.min(offset + CHUNK_LENGTH, buffer.length)), 'utf8'));
-    }
-    arrChunks.push(decipher.final());
-    return Buffer.concat(arrChunks);
   }
 }
