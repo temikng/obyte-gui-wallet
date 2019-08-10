@@ -9,7 +9,7 @@ angular.module('copayApp.services')
 function ProfileServiceFactory(
   $rootScope, $location, $timeout, $filter, $log,
   lodash, storageService, bwcService, configService, pushNotificationsService, isCordova, gettext, gettextCatalog,
-  nodeWebkit, uxLanguage, continuousBackupService
+  nodeWebkit, uxLanguage, cloudsStoragesService, continuousBackupService
 ) {
     var root = {};
 
@@ -227,7 +227,12 @@ function ProfileServiceFactory(
 							if (!root.assetMetadata[asset])
 								root.assetMetadata[asset] = assocAssetMetadata[asset];
 						}
-					});
+          });
+          
+                    cloudsStoragesService.init()
+                      .then(function () {
+                        console.log('ProfileSerivce bindProfile cloudsStoragesService inited');
+                      });
                     return cb();
                 });
             });
