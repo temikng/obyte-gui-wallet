@@ -1,4 +1,4 @@
-class BackupWalletCordova extends AbstractBackupWallet {
+class BackupWalletCloudCordova extends AbstractBackupWallet {
   constructor (options, services) {
     super(options, services);
   }
@@ -17,16 +17,23 @@ class BackupWalletCordova extends AbstractBackupWallet {
       zip.file(key, filesData[key]);
     }
 
-    var zipParams = {type: "nodebuffer", compression: 'DEFLATE', compressionOptions: {level: 9}};
+    var zipParams = {
+      type: "nodebuffer",
+      compression: 'DEFLATE',
+      compressionOptions: {
+        level: this._bCompression ? 9 : 0
+      }
+    };
+    
     zip.generateAsync(zipParams)
       .then(
         (zipFile) => {
+          console.log('BackupWalletCloudCordova saveFile zipFile', zipFile);
           var file = this._encrypt(zipFile);
-          var pathToFile = this._filename;
-          this._services.fileSystem.cordovaWriteFile(
-            (this._services.isMobile.iOS() ? window.cordova.file.cacheDirectory : window.cordova.file.externalRootDirectory),
-            'Obyte', pathToFile, file, cb
-          );
+          console.log('BackupWalletCloudCordova saveFile zipFile encrypted', this._filename, file);
+          this._services.cloudStorage.uploadFileAuth(this._filename, file)
+            .then(() => cb())
+            .catch(cb);
         },
         (err) => {
           cb(err);

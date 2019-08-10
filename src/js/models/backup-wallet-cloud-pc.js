@@ -28,9 +28,9 @@ class BackupWalletCloudPC extends AbstractBackupWallet {
     zip.generateAsync(zipParams)
       .then(
         (zipFile) => {
-          console.log('BackupWalletPC saveFile zipFile', zipFile);
+          console.log('BackupWalletCloudPC saveFile zipFile', zipFile);
           var file = this._encrypt(zipFile);
-          console.log('BackupWalletPC saveFile zipFile encrypted', file);
+          console.log('BackupWalletCloudPC saveFile zipFile encrypted', file);
           this._services.cloudStorage.uploadFileAuth(this._filename, file)
             .then(() => cb())
             .catch(cb);
