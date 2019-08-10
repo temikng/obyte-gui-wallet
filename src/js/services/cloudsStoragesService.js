@@ -3,7 +3,7 @@ angular.module('copayApp.services')
 	.factory('cloudsStoragesService', CloudsStoragesServiceFactory);
 	
 function CloudsStoragesServiceFactory($log, configService, isCordova) {
-  const config = configService.getSync();
+  let bInited = false;
   const fetch = require('isomorphic-fetch');
   const cloudStorages = new CloudStorages({
     log: $log,
@@ -13,6 +13,7 @@ function CloudsStoragesServiceFactory($log, configService, isCordova) {
   });
 
   function handleSaveData(data) {
+    const config = configService.getSync();
     const cloudStoragesConfig = config.cloudStorages;
     for (let key in data) {
       cloudStoragesConfig[key] = data[key];
@@ -29,23 +30,6 @@ function CloudsStoragesServiceFactory($log, configService, isCordova) {
       }
     );
   }
-
-  console.log('CloudsStoragesServiceFactory config cloudStorages', config.cloudStorages);
-  const options = {
-    "clientId": "w3dc28uvqy5352v",
-    "clientSecret": "rla27s8ntyvia4m"
-  };
-  options.data = config.cloudStorages.dropbox || {};
-  const storage = new DropboxCloudStorage(options);
-  cloudStorages.add(storage);
-
-  cloudStorages.init()
-    .then(() => {
-      console.log('CloudsStoragesServiceFactory cloudStorages inited');
-    })
-    .catch((err) => {
-      console.log('CloudsStoragesServiceFactory cloudStorages init ERROR', err);
-    });
   
   if (!isCordova) {
     const win = require('nw.gui').Window.get();
@@ -56,6 +40,30 @@ function CloudsStoragesServiceFactory($log, configService, isCordova) {
   }
 
   return {
+    init() {
+      if (bInited) {
+        return;
+      }
+      bInited = true;
+
+      const config = configService.getSync();
+      console.log('CloudsStoragesServiceFactory config cloudStorages', config.cloudStorages);
+      const options = {
+        "clientId": "w3dc28uvqy5352v",
+        "clientSecret": "rla27s8ntyvia4m"
+      };
+      options.data = config.cloudStorages.dropbox || {};
+      const storage = new DropboxCloudStorage(options);
+      cloudStorages.add(storage);
+
+      return cloudStorages.init()
+        .then(() => {
+          console.log('CloudsStoragesServiceFactory cloudStorages inited');
+        })
+        .catch((err) => {
+          console.log('CloudsStoragesServiceFactory cloudStorages init ERROR', err);
+        });
+    },
     getSet() {
       return cloudStorages.getSet();
     },
