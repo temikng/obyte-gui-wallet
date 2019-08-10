@@ -8,24 +8,20 @@ function ContinuousBackupServiceFactory(
 	isCordova, isMobile,
 	lodash, cloudsStoragesService
 ) {
-	var path = require('path');
 	var crypto = require('crypto');
-	var Mnemonic = require('bitcore-mnemonic');
-	var conf = require('ocore/conf');
 	var eventBus = require('ocore/event_bus.js');
-	var device = require('ocore/device.js');
-	var config = configService.getSync();
-	var backupCong = config.continuousBackup;
 	var continuousBackupWalletCtrl = new ContinuousBackupWalletController({
 		crypto: crypto
 	});
 	var root = {};
+	var backupCong = {};
 
 	eventBus.on('backup_needed', function (sLog) {
 		root.doBackupInBackground(sLog);
 	});
 
 	root.getUniqueFilename = function () {
+		var device = require('ocore/device.js');
 		return 'ObyteBackup-' + device.getMyDeviceAddress() + '.encrypted';
 	};
 	
@@ -34,27 +30,16 @@ function ContinuousBackupServiceFactory(
 		continuousBackupWalletCtrl.setBackupPrivateKey(key);
 	}
 
-	root.doRestoreByMnemonic = function (sMnemonic, filename, cb) {
-		sMnemonic = sMnemonic.toLowerCase();
-		if ((sMnemonic.split(' ').length % 3 === 0) && Mnemonic.isValid(sMnemonic)) {
-			var xPrivKey = new Mnemonic(sMnemonic).toHDPrivateKey();
-			this.doRestore(xPrivKey.xprivkey, filename, cb);
-		} else {
-			return cb('Seed is not valid');
-		}
-	}
-
-	root.doRestore = function (password, filename, cb) {
+	root.doLocalRestore = function (password, file, cb) {
 		if (!cb) {
 			cb = function () {};
 		}
 
-		var sLogLabel = 'ContinuousBackupServiceFactory doRestore: ' + filename + '_' + password + '_' + Date.now();;
+		var sLogLabel = 'ContinuousBackupServiceFactory doLocalRestore: ' + file.name + '_' + password + '_' + Date.now();;
 		console.log(sLogLabel, 'start');
 		console.time(sLogLabel);
-		var restoreWallet;
 		var restoreWalletOptions = {
-			filename: filename,
+			file: file,
 			password: password,
 		};
 		var restoreWalletServices = {
@@ -62,7 +47,37 @@ function ContinuousBackupServiceFactory(
 			fileSystem: fileSystemService,
 			isMobile: isMobile,
 			crypto: crypto
+		};
+		var restoreWallet = new RestoreWalletPC(restoreWalletOptions, restoreWalletServices);
+		continuousBackupWalletCtrl.doRestore(restoreWallet, function (err) {
+			console.timeEnd(sLogLabel);
+			if (err) {
+				console.error(err);
+			}
+			
+			cb(err);
+		});
+	}
+
+	root.doCloudRestore = function (password, file, cb) {
+		if (!cb) {
+			cb = function () {};
 		}
+
+		var sLogLabel = 'ContinuousBackupServiceFactory doCloudRestore: ' + file.name + '_' + password + '_' + Date.now();;
+		console.log(sLogLabel, 'start');
+		console.time(sLogLabel);
+		var restoreWallet;
+		var restoreWalletOptions = {
+			file: file,
+			password: password,
+		};
+		var restoreWalletServices = {
+			storage: storageService,
+			fileSystem: fileSystemService,
+			isMobile: isMobile,
+			crypto: crypto
+		};
 		if (isCordova) {
 			restoreWallet = new RestoreWalletCloudCordova(restoreWalletOptions, restoreWalletServices);
 		} else {
@@ -78,60 +93,14 @@ function ContinuousBackupServiceFactory(
 		});
 	}
 
-	root.doFileRestore = function (password, file, cb) {
-		if (!cb) {
-			cb = function () {};
-		}
-
-		var sLogLabel = 'ContinuousBackupServiceFactory doRestore: ' + file.name + '_' + password + '_' + Date.now();;
-		console.log(sLogLabel, 'start');
-		console.time(sLogLabel);
-		var restoreWallet;
-		var restoreWalletOptions = {
-			file: file,
-			password: password,
-		};
-		var restoreWalletServices = {
-			storage: storageService,
-			fileSystem: fileSystemService,
-			isMobile: isMobile,
-			crypto: crypto
-		}
-		if (isCordova) {
-			restoreWallet = new RestoreWalletCordova(restoreWalletOptions, restoreWalletServices);
-		} else {
-			restoreWallet = new RestoreWalletPC(restoreWalletOptions, restoreWalletServices);
-		}
-		continuousBackupWalletCtrl.doRestore(restoreWallet, function (err) {
-			console.timeEnd(sLogLabel);
-			if (err) {
-				console.error(err);
-			}
-			
-			cb(err);
-		});
-	}
-
-	root.doBackupInBackground = lodash.throttle(function (sLog) {
-		config = configService.getSync();
-		backupCong = config.continuousBackup;
-		console.log('ContinuousBackupServiceFactory doBackupInBackground', backupCong);
-
-		if (!backupCong.type) {
-			return;
-		}
-		// if (backupCong.type === 'storage') {
-		// 	root.doBackup(sLog);
-		// } else {
-			root.doCloudBackup(sLog);
-		// }
-		
+	root.doBackupInBackground = lodash.throttle(function (sLog, cb) {
+		root.doBackup(sLog, cb);
 	}, 2000);
 
 	root.doBackup = function (sLog, cb) {
-		if (!backupCong.dirPath) {
-			return;
-		}
+		var config = configService.getSync();
+		backupCong = config.continuousBackup;
+
 		if (typeof sLog === 'function') {
 			cb = sLog;
 			sLog = null;
@@ -140,16 +109,44 @@ function ContinuousBackupServiceFactory(
 			cb = function () {};
 		}
 
+		console.log('ContinuousBackupServiceFactory doBackup: ', JSON.stringify(backupCong));
+		if (!backupCong.type) {
+			return cb();
+		}
+
 		sLog = (sLog || 'backup') + '_' + Date.now();
-		var sLogLabel = 'ContinuousBackupServiceFactory _doBackup: ' + sLog;
+		var sLogLabel = 'ContinuousBackupServiceFactory doBackup: ' + sLog;
 		console.log(sLogLabel, 'start');
 		console.time(sLogLabel);
 
-		var backupWallet;
+		if (backupCong.type === 'local') {
+			root._doLocalBackup(handleCallback);
+		} else {
+			root._doCloudBackup(handleCallback);
+		}
+
+		function handleCallback(err) {
+			console.timeEnd(sLogLabel);
+			if (err) {
+				console.error(err);
+			}
+			
+			cb(err);
+		}
+	}
+
+	root._doLocalBackup = function (cb) {
+		if (isCordova || !backupCong.localPath) {
+			backupCong.type = null;
+			return cb('Wrong local continuous backup config');
+		}
+
+		var path = require('path');
+		var conf = require('ocore/conf');
 		var backupWalletOptions = {
-			filename: path.join(backupCong.dirPath, root.getUniqueFilename()),
+			filename: path.join(backupCong.localPath, root.getUniqueFilename()),
 			keyHash: continuousBackupWalletCtrl.getCachedBackupKeyHash(),
-			bCompression: false,
+			bCompression: true,
 			bLight: conf.bLight,
 		};
 		var backupWalletServices = {
@@ -158,38 +155,22 @@ function ContinuousBackupServiceFactory(
 			isMobile: isMobile,
 			crypto: crypto
 		}
-		if (isCordova) {
-			backupWallet = new BackupWalletCloudCordova(backupWalletOptions, backupWalletServices);
-		} else {
-			backupWallet = new BackupWalletCloudPC(backupWalletOptions, backupWalletServices);
-		}
-		continuousBackupWalletCtrl.doBackup(backupWallet, function (err) {
-			console.timeEnd(sLogLabel);
-			if (err) {
-				console.error(err);
-			}
-			
-			cb(err);
-		});
+		var backupWallet = new BackupWalletPC(backupWalletOptions, backupWalletServices);
+
+		continuousBackupWalletCtrl.doBackup(backupWallet, cb);
 	};
 
-	root.doCloudBackup = function (sLog, cb) {
-		if (typeof sLog === 'function') {
-			cb = sLog;
-			sLog = null;
-		}
-		if (!cb) {
-			cb = function () {};
+	root._doCloudBackup = function (cb) {
+		var cloudStorage = cloudsStoragesService.get(backupCong.type);
+		if (!cloudStorage) {
+			backupCong.type = null;
+			return cb('Wrong cloud continuous backup config');
 		}
 
-		sLog = (sLog || 'backup') + '_' + Date.now();
-		var sLogLabel = 'ContinuousBackupServiceFactory doCloudBackup: ' + sLog;
-		console.log(sLogLabel, 'start');
-		console.time(sLogLabel);
-
-		var cloudStorage = cloudsStoragesService.get(backupCong.type)
+		var conf = require('ocore/conf');
+		var backupWallet;
 		var backupWalletOptions = {
-			// filename: path.join(backupCong.dirPath, root.getUniqueFilename()),
+			// filename: path.join(backupCong.localPath, root.getUniqueFilename()),
 			filename: root.getUniqueFilename(),
 			keyHash: continuousBackupWalletCtrl.getCachedBackupKeyHash(),
 			bCompression: false,
@@ -202,16 +183,14 @@ function ContinuousBackupServiceFactory(
 			crypto: crypto,
 			cloudStorage: cloudStorage
 		};
-		var backupWallet = new BackupWalletCloudPC(backupWalletOptions, backupWalletServices);
+		if (isCordova) {
+			backupWallet = new BackupWalletCloudCordova(backupWalletOptions, backupWalletServices);
+		} else {
+			backupWallet = new BackupWalletCloudPC(backupWalletOptions, backupWalletServices);
+		}
 	
-		continuousBackupWalletCtrl.doBackup(backupWallet, function (err) {
-			console.timeEnd(sLogLabel);
-			if (err) {
-				console.error(err);
-			}
-			
-			cb(err);
-		});
+		console.log('ContinuousBackupServiceFactory _doCloudBackup: ', backupWallet.constructor);
+		continuousBackupWalletCtrl.doBackup(backupWallet, cb);
 	};
 
 	return root;
