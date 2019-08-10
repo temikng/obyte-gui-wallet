@@ -9,14 +9,14 @@ function ContinuousBackupCtrl(
 	cloudsStoragesService, continuousBackupService
 ) {
 	const config = configService.getSync();
+	var elDirSelector;
 
 	$scope.error = null;
 	$scope.exporting = false;
-	$scope.turnOnBackup = config.continuousBackup.backgroundTurnedOn;
-	$scope.dirPath = config.continuousBackup.data;
 	$scope.isCordova = isCordova;
 
-	$scope.activeCloudStorageKey = config.continuousBackup.type;
+	$scope.localPath = config.continuousBackup.localPath;
+	$scope.activeStorageKey = config.continuousBackup.type;
 	$scope.cloudStorages = cloudsStoragesService.getSet();
 	console.log('ContinuousBackupCtrl init');
 
@@ -41,28 +41,49 @@ function ContinuousBackupCtrl(
 
 	function handleCloudStorageChangedAuthStatus() {
 		handleUpdateScope();
-		console.log('ContinuousBackupCtrl handleCloudStorageChangedAuthStatus', $scope.activeCloudStorageKey);
+		console.log('ContinuousBackupCtrl handleCloudStorageChangedAuthStatus', $scope.activeStorageKey);
 		saveConfig();
 	}
 
-	$scope.checkCloudStorageActive = function (key) {
-		return $scope.activeCloudStorageKey === key;
-	}
+	$scope.isLocalStorageAvailable = function () {
+		return !isCordova && elDirSelector;
+	};
 
-	$scope.setActiveCloudStorage = function (key) {
-		if ($scope.activeCloudStorageKey === key) {
+	$scope.checkStorageActive = function (key) {
+		return $scope.activeStorageKey === key;
+	};
+
+	$scope.setActiveStorage = function (key) {
+		if ($scope.exporting || $scope.activeStorageKey === key) {
 			return;
 		}
-		console.log('ContinuousBackupCtrl onChange activeCloudStorageKey', key);
+
+		console.log('ContinuousBackupCtrl setActiveStorage', key);
 		if (key === null) {
-			$scope.activeCloudStorageKey = key;
+			$scope.activeStorageKey = key;
 			saveConfig();
 			return;
 		}
 
+		if (key === 'local') {
+			if (!elDirSelector) {
+				return;
+			}
+			console.log('ContinuousBackupCtrl setActiveStorage local', elDirSelector);
+			if ($scope.localPath) {
+				$scope.activeStorageKey = key;
+				return;
+			}
+			elDirSelector.click();
+			return;
+		}
+
 		const cloudStorage = $scope.cloudStorages[key];
+		if (!cloudStorage) {
+			return;
+		}
 		if (cloudStorage.isAuthenticated()) {
-			$scope.activeCloudStorageKey = key;
+			$scope.activeStorageKey = key;
 			saveConfig();
 			return;
 		}
@@ -71,14 +92,14 @@ function ContinuousBackupCtrl(
 			.then(function (bIsAuthenticated) {
 				console.log('ContinuousBackupCtrl onChange authorizationAccount', key, bIsAuthenticated);
 				if (bIsAuthenticated) {
-					$scope.activeCloudStorageKey = key;
+					$scope.activeStorageKey = key;
 				} else {
-					$scope.activeCloudStorageKey = null;
+					$scope.activeStorageKey = null;
 				}
 			})
 			.catch(function (err) {
 				console.error(err);
-				$scope.activeCloudStorageKey = null;
+				$scope.activeStorageKey = null;
 			})
 			.then(function () {
 				handleCloudStorageChangedAuthStatus();
@@ -87,54 +108,91 @@ function ContinuousBackupCtrl(
 
 	$scope.checkCloudStorageLogedIn = function (key) {
 		const cloudStorage = $scope.cloudStorages[key];
+		if (!cloudStorage) {
+			return false;
+		}
 		return cloudStorage.isAuthenticated() && cloudStorage.isInited;
-	}
+	};
 
 	$scope.logoutCloudStorage = function (key) {
 		console.log('ContinuousBackupCtrl logoutCloudStorage', key);
+		if ($scope.exporting) {
+			return;
+		}
 		const cloudStorage = $scope.cloudStorages[key];
 		cloudStorage.clearAuthData();
-		if ($scope.activeCloudStorageKey === key) {
-			$scope.activeCloudStorageKey = null;
+		if ($scope.activeStorageKey === key) {
+			$scope.activeStorageKey = null;
 			saveConfig();
 		}
+	};
+
+	$scope.isLocalPathActive = function () {
+		return $scope.activeStorageKey === 'local';
+	};
+
+	$scope.isLocalPathSelected = function () {
+		return !!$scope.localPath;
 	}
 
-	$scope.$watch('$viewContentLoaded', function () {
-		console.log('ContinuousBackupCtrl viewContentLoaded');
-		var elDirSelector = document.querySelector('#dirSelector');
-		var elDirOutput = document.querySelector('#dirOutput');
+	$scope.getLocalPath = function () {
+		return $scope.localPath || '';
+	};
+
+	$scope.chooseLocalPath = function () {
 		if (!elDirSelector) {
 			return;
 		}
+		elDirSelector.click();
+	};
 
-		elDirSelector.addEventListener('change', function (event) {
-			var dir = (event.srcElement || event.target).files[0];
-			console.log('ContinuousBackupCtrl getFile', dir, event);
-			if (!dir) {
+	$scope.removeLocalPath = function () {
+		if ($scope.activeStorageKey === 'local') {
+			$scope.activeStorageKey = null;
+		}
+		if (elDirSelector) {
+			elDirSelector.value = '';
+		}
+		$scope.localPath = null;
+		saveConfig();
+	}
+
+	$scope.$watch('$viewContentLoaded', function () {
+		$timeout(function () {
+			elDirSelector = document.querySelector('#dirSelector');
+			console.log('ContinuousBackupCtrl viewContentLoaded', elDirSelector);
+			if (!elDirSelector) {
 				return;
 			}
-			elDirOutput.innerHTML = $scope.dirPath = dir.path;
 
-			saveConfig();
-			$timeout(function () {
-				$rootScope.$apply();
+			elDirSelector.addEventListener('change', function (event) {
+				var dir = (event.srcElement || event.target).files[0];
+				console.log('ContinuousBackupCtrl getFile', dir, event);
+				if (!dir) {
+					return;
+				}
+				var dirPath = dir.path;
+				if (dirPath) {
+					$scope.localPath = dirPath;
+					$scope.activeStorageKey = 'local';
+				} else {
+					$scope.localPath = null;
+					$scope.activeStorageKey = null;
+				}
+
+				saveConfig();
+				$timeout(function () {
+					$rootScope.$apply();
+				});
 			});
-		});
 
-		elDirOutput.innerHTML = $scope.dirPath || '';
-		console.log('ContinuousBackupCtrl dirChanged', elDirSelector);
+			console.log('ContinuousBackupCtrl dirChanged', elDirSelector);
+		});
 	});
 	
 	$scope.isBackupDisabled = function () {
-		return $scope.exporting || !$scope.activeCloudStorageKey;
+		return $scope.exporting || !$scope.activeStorageKey;
 	};
-
-	$scope.isTurnOnBackupBtnDisabled = function () {
-		return !$scope.dirPath || $scope.exporting;
-	};
-
-	$scope.cordovaChooseFolder = function () {}
 
 	$scope.walletExport = function () {
 		if ($scope.isBackupDisabled()) {
@@ -144,7 +202,8 @@ function ContinuousBackupCtrl(
 		$scope.error = '';
 		$scope.exporting = true;
 
-		continuousBackupService.doCloudBackup('export-now', function (err) {
+		continuousBackupService.doBackup('export-now', function (err) {
+			console.log('ContinuousBackupCtrl walletExport doBackup: err ' + (err && err.message || err));
 			$scope.exporting = false;
 			if (err) {
 				$scope.error = err;
@@ -167,8 +226,8 @@ function ContinuousBackupCtrl(
 		}
 		var opts = {
 			continuousBackup: {
-				backgroundTurnedOn: $scope.turnOnBackup,
-				type: $scope.activeCloudStorageKey,
+				localPath: $scope.localPath,
+				type: $scope.activeStorageKey,
 			},
 		}
 

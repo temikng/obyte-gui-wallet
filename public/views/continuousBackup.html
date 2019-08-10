@@ -24,34 +24,75 @@
 			<i class="fi-alert size-12"></i>
 			<span translate> Failed to export: {{ error }} </span>
 		</div>
+
+		<input class="input-folder" id="dirSelector" type="file"
+			nwdirectory ng-disabled="exporting">
 		
 		<form>
-			<table class="cloud-storages-list">
-				<tr class="cloud-storages-list__item cloud-storages-item" ng-click="setActiveCloudStorage(null)">
-					<td class="cloud-storages-item__selector-holder">
-						<input type="radio" class="cloud-storages-item__selector" name="storage_type"
-							id="storage_type_null"
-							ng-value="null" ng-checked="checkCloudStorageActive(null)"/>
+			<table class="storages-list">
+				<tr class="storages-list__item storages-item" ng-click="setActiveStorage(null)">
+					<td class="storages-item__selector-holder">
+						<div class="storages-item__selector" ng-class="{'active': checkStorageActive(null)}"></div>
 					</td>
-					<td class="cloud-storages-item__content">
-						<div class="cloud-storages-item__title">Not selected</div>
+					<td>
+						<div class="storages-item__content-holder">
+							<div class="storages-item__content">
+								<div class="storages-item__title">Not selected</div>
+							</div>
+							<div class="storages-item__btns"></div>
+						</div>
 					</td>
 				</tr>
-				<tr class="cloud-storages-list__item cloud-storages-item"
-					ng-repeat="(key, cloudStorage) in cloudStorages" ng-click="setActiveCloudStorage(key)">
-					<td class="cloud-storages-item__selector-holder">
-						<input type="radio" class="cloud-storages-item__selector" name="storage_type"
-							id="storage_type_{{key}}"
-							ng-value="key" ng-checked="checkCloudStorageActive(key)"/>
+
+				<tr class="storages-list__item storages-item"
+					ng-if="isLocalStorageAvailable()"
+					ng-init="key = 'local'"
+					ng-click="setActiveStorage(key)">
+					<td class="storages-item__selector-holder">
+						<div class="storages-item__selector" ng-class="{'active': checkStorageActive(key)}"></div>
 					</td>
-					<td class="cloud-storages-item__content">
-						<div class="cloud-storages-item__title">{{cloudStorage.getTitle()}}</div>
-						<div class="cloud-storages-item__account-holder"
-							ng-class="{'cloud-storages-item__account-holder--active': cloudStorage.isAuthenticated()}">
-							<div class="cloud-storages-item__account-name">{{cloudStorage.getAccountName()}}</div>
+					<td>
+						<div class="storages-item__content-holder">
+							<div class="storages-item__content">
+								<div class="storages-item__title" translate>Local</div>
+								<div class="storages-item__account-holder">
+									<div class="storages-item__account-name">{{getLocalPath()}}</div>
+								</div>
+							</div>
+							<div class="storages-item__btns">
+								<button type="button" class="button expand btn-choose-file"
+									ng-if="isLocalPathSelected()"
+									ng-click="chooseLocalPath(); $event.stopPropagation();">
+									<i class="icon-download circle"></i>
+								</button>
+								<button type="button" class="button expand warning btn-clear"
+									ng-if="isLocalPathSelected()"
+									ng-click="removeLocalPath(); $event.stopPropagation();">x</button>
+							</div>
 						</div>
-						<div class="cloud-storages-item__btn-logout" ng-if="checkCloudStorageLogedIn(key)">
-							<button ng-click="logoutCloudStorage(key); $event.stopPropagation();">x</button>
+					</td>
+				</tr>
+
+				<tr class="storages-list__item storages-item"
+					ng-repeat="(key, cloudStorage) in cloudStorages"
+					ng-click="setActiveStorage(key)">
+					<td class="storages-item__selector-holder">
+						<div class="storages-item__selector" ng-class="{'active': checkStorageActive(key)}"></div>
+					</td>
+					<td>
+						<div class="storages-item__content-holder">
+							<div class="storages-item__content">
+								<div class="storages-item__title">{{cloudStorage.getTitle()}}</div>
+								<div class="storages-item__account-holder"
+									ng-class="{'storages-item__account-holder--active': cloudStorage.isAuthenticated()}">
+									<div class="storages-item__account-name">{{cloudStorage.getAccountName()}}</div>
+								</div>
+							</div>
+							<div class="storages-item__btns">
+								<button type="button" class="button warning btn-clear"
+									ng-if="checkCloudStorageLogedIn(key)"
+									ng-click="logoutCloudStorage(key); $event.stopPropagation();">x</button>
+							</div>
 						</div>
 					</td>
 				</tr>
@@ -67,6 +108,7 @@
 				</div>
 			</div>
 		</form>
+
 		<div class="text-alert size-12 columns">
 			<span translate>WARNING:</span>
 			<ul class="warnings">
@@ -76,3 +118,79 @@
 	</div>
 </div>
 <div class="extra-margin-bottom"></div>
+
+<style>
+	.input-folder {
+		position: absolute;
+    width: 1px !important;
+    height: 1px;
+    cursor: default;
+    overflow: hidden;
+    visibility: hidden;
+    margin: 0 !important;
+    padding: 0 !important;
+    opacity: 0;
+	}
+	.storages-item {
+		cursor: pointer;
+	}
+	.storages-item__selector-holder {
+		width: 25px;
+	}
+	.storages-item__selector {
+		position: relative;
+		width: 25px;
+		height: 25px;
+		border-radius: 3px;
+		border: 1px solid #dfdfdf;
+		background: transparent;
+		color: white;
+	}
+	.storages-item__selector.active {
+		background: #7A8C9E;
+		border-color: #7A8C9E;
+	}
+	.storages-item__selector.active:after {
+		position: absolute;
+		content: '\2713';
+		top: 3px;
+    left: 3px;
+    font-size: 21px;
+	}
+	.storages-item__content-holder {
+		display: flex;
+	}
+	.storages-item__content {
+		padding-left: 0;
+		padding-right: 0;
+    word-break: break-all;
+		flex: 1;
+	}
+	.storages-item__content .storages-item__title {
+		font-size: 16px;
+		font-weight: bold;
+	}
+	.storages-item__btns {
+		/* width: 90px; */
+    text-align: right;
+	}
+	.storages-item__btns button {
+		display: inline-block;
+		padding: 4px;
+    font-size: 14px;
+    margin: 0 0 0 1px;
+	}
+	.storages-item__btns .btn-choose-file {
+		width: 35px;
+    height: 35px;
+    padding: 5px;
+	}
+	.storages-item__btns .btn-clear {
+		width: 35px;
+    height: 35px;
+    padding: 5px;
+	}
+	/* .storages-item__btns button:first-child {
+		margin-left: 0;
+	} */
+</style>
