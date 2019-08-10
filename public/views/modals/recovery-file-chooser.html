@@ -1,0 +1,118 @@
+<nav class="tab-bar">
+	<section class="left-small">
+		<a ng-click="cancel()" class="p10">
+			<span class="text-close" translate>Close</span>
+		</a>
+	</section>
+</nav>
+
+<div class="modal-content fix-modals-touch recovery-file-chooser-content" ng-switch="screenType">
+
+  <input class="input-file-selector" id="fileSelector" type="file" ng-file-select>
+
+  <div class="loading-stub" ng-class="{'active': bLoading}">{{'Loading'|translate}}...</div>
+  <div class="row" ng-switch-when="storages">
+
+    <h1 class="text-center" translate>Select storage type</h1>
+
+    <ul class="no-bullet m0 columns storages">
+      <li class="storages__item storages-item"
+          ng-if="isLocalStorageAvailable()"
+          ng-click="selectLocalFile()">
+        <div class="storages-item__title" translate>Local</div>
+      </li>
+      <li class="storages__item storages-item"
+          ng-repeat="(key, cloudStorage) in cloudStorages"
+          ng-click="openCloudStorageFilesList(key)">
+        <div class="storages-item__title">{{cloudStorage.getTitle()}}</div>
+        <div class="storages-item__account-holder" ng-if="cloudStorage.isAuthenticated()">
+          <div class="storages-item__account-name">{{cloudStorage.getAccountName()}}</div>
+        </div>
+      </li>
+    </ul>
+
+  </div>
+  <div class="row" ng-switch-when="files">
+
+    <h1 class="text-center" translate>Select cloud file ({{getCurrentCloudTitle()}})</h1>
+
+    <ul class="no-bullet m0 columns files-list">
+      <li class="files-list-item"
+        ng-click="backToStorageSelect()">
+        <div class="files-list-item__title">...</div>
+      </li>
+      <li ng-repeat="file in chooseList" class="files-list-item"
+        ng-click="chooseFile(file.path_display)">
+        <div class="files-list-item__title">{{file.name}}</div>
+      </li>
+    </ul>
+  
+  </div>
+</div>
+
+<style>
+  .recovery-file-chooser-content {
+    position: relative;
+  }
+  .recovery-file-chooser-content .input-file-selector {
+    position: absolute;
+    width: 1px !important;
+    height: 1px;
+    cursor: default;
+    overflow: hidden;
+    visibility: hidden;
+    margin: 0 !important;
+    padding: 0 !important;
+    opacity: 0;
+  }
+  .recovery-file-chooser-content .loading-stub {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #ffffffcf;
+    z-index: 1;
+    display: none;
+    justify-content: center;
+    align-items: center;
+  }
+  .recovery-file-chooser-content .loading-stub.active {
+    display: flex;
+  }
+
+  .storages,
+  .files-list {
+    border-top: 1px solid #e9e9eC;
+    padding: 0;
+  }
+  .storages-item,
+  .files-list-item {
+    padding: 15px;
+    border-bottom: 1px solid #e9e9eC;
+    word-break: break-all;
+    cursor: pointer;
+  }
+  .storages-item:hover,
+  .files-list-item:hover {
+    background-color: #e9e9eC;
+  }
+  .storages-item .storages-item__title {
+    font-size: 16px;
+		font-weight: bold;
+  }
+
+  .files-list-item .files-list-item__title {
+    font-size: 16px;
+  }
+
+  .recovery-file-chooser-content .files-list {
+    border-top: 1px solid #e9e9eC;
+    padding: 0;
+  }
+  .recovery-file-chooser-content .files-list .files-list-item {
+    border-bottom: 1px solid #e9e9eC;
+  }
+</style>

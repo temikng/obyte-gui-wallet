@@ -4,7 +4,7 @@
 	ng-init="titleSection='Recover from backup'; goBackToState = true">
 </div>
 
-<div class="content preferences" ng-controller="recoveryCtrl">
+<div class="content preferences recovery-page" ng-controller="recoveryCtrl">
 	<h4></h4>
 
 	<div class="onGoingProcess" ng-show="importing">
@@ -30,10 +30,11 @@
 			<label><span translate>Your Backup Wallet Seed:</span></label>
 			<textarea id="inputMnemonic" autocomplete="off"
 				ng-model="inputMnemonic" ng-disabled="importing"></textarea>
-			<button type="button" ng-click="openChooserCloudFileModal()">Choose file from Cloud Storage</button>
-			<div ng-if="file">
-				{{file.name}}
-				<button ng-click="clearFile()">x</button>
+			<button type="button" class="button expand btn-choose-file"
+				ng-click="openChooserFileModal()">Choose file</button>
+			<div ng-if="file" class="selected-file-container">
+				<div class="selected-file-name">{{file.name}}</div>
+				<button class="button expand warning btn-clear-file" ng-click="clearFile()">x</button>
 			</div>
 
 			<input ng-disabled="isSubmitDisabled()" ng-show="!importing"
@@ -52,3 +53,24 @@
 
 </div>
 <div class="extra-margin-bottom"></div>
+
+<style>
+	.recovery-page .btn-choose-file {
+		width: 100%;
+	}
+	.recovery-page .selected-file-container {
+		width: 100%;
+		word-break: break-all;
+		display: flex;
+		margin-bottom: 1.25rem;
+	}
+	.recovery-page .selected-file-container .selected-file-name {
+		flex: 1;
+	}
+	.recovery-page .selected-file-container .btn-clear-file {
+		width: 35px;
+    height: 35px;
+    padding: 5px;
+    margin: 0;
+	}
+</style>

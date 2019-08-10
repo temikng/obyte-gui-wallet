@@ -11,19 +11,17 @@ function RecoveryCtrl($rootScope, $scope, $timeout, $modal, configService, conti
 	$scope.inputMnemonic =  profileService.focusedClient.getMnemonic();
 	$scope.turnOnBackup = false;
 	$scope.error = '';
+	$scope.storageType = null;
+	$scope.file = null;
 
 	$scope.$on('$destroy', function () {
 		console.log('RecoveryCtrl $destroy');
 	});
 
-	$scope.getFile = function () {
-		$timeout(function () {
-			$rootScope.$apply();
-		});
-	};
-
 	$scope.clearFile = function () {
+		$scope.storageType = null;
 		$scope.file = null;
+		$scope.error = '';
 	};
 
 	$scope.isSubmitDisabled = function () {
@@ -34,10 +32,10 @@ function RecoveryCtrl($rootScope, $scope, $timeout, $modal, configService, conti
 		return !$scope.file || $scope.importing;
 	}
 
-	$scope.openChooserCloudFileModal = function () {
+	$scope.openChooserFileModal = function () {
 		var modalInstance = $modal.open({
-			templateUrl: 'views/modals/recovery-cloud-file-chooser.html',
-			controller: 'recoveryCloudFileChooserCtrl'
+			templateUrl: 'views/modals/recovery-file-chooser.html',
+			controller: 'recoveryFileChooserCtrl'
 		});
 		$rootScope.$on('closeModal', function () {
 			modalInstance.dismiss('cancel');
@@ -47,9 +45,11 @@ function RecoveryCtrl($rootScope, $scope, $timeout, $modal, configService, conti
 			m.addClass(animationService.modalAnimated.slideOutDown);
 		});
 		modalInstance.result
-			.then(function (file) {
-				console.log('RecoveryCtrl modal then', file);
-				$scope.file = file;
+			.then(function (data) {
+				console.log('RecoveryCtrl modal then', data);
+				$scope.storageType = data.type;
+				$scope.file = data.file;
+				$scope.error = '';
 			});
 	}
 
@@ -67,9 +67,12 @@ function RecoveryCtrl($rootScope, $scope, $timeout, $modal, configService, conti
 
 		$scope.error = '';
 		$scope.importing = true;
-		// var filePath = $scope.file.path;
 
-		continuousBackupService.doFileRestore(getMnemonicKey(sMnemonic), $scope.file, function (err) {
+		var fnRestore = $scope.storageType === 'cloud'
+			?	continuousBackupService.doCloudRestore
+			:	continuousBackupService.doLocalRestore;
+
+		fnRestore(getMnemonicKey(sMnemonic), $scope.file, function (err) {
 			if (err) {
 				showError(err);
 				return;
