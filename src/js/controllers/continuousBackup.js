@@ -14,11 +14,16 @@ function ContinuousBackupCtrl(
 	$scope.error = null;
 	$scope.exporting = false;
 	$scope.isCordova = isCordova;
+	$scope.bInited = cloudsStoragesService.isInited();
 
 	$scope.localPath = config.continuousBackup.localPath;
 	$scope.activeStorageKey = config.continuousBackup.type;
 	$scope.cloudStorages = cloudsStoragesService.getSet();
 	console.log('ContinuousBackupCtrl init');
+
+	if (!$scope.bInited) {
+		cloudsStoragesService.cloudStorages().once(CloudStorageEvents.Inited, handleCloudsStoragesInited);
+	}
 
 	for (const key in $scope.cloudStorages) {
 		const cloudStorage = $scope.cloudStorages[key];
@@ -27,6 +32,8 @@ function ContinuousBackupCtrl(
 	}
 
 	$scope.$on('$destroy', function () {
+		cloudsStoragesService.cloudStorages().removeListener(CloudStorageEvents.Inited, handleCloudsStoragesInited);
+
 		for (const key in $scope.cloudStorages) {
 			const cloudStorage = $scope.cloudStorages[key];
 			cloudStorage.removeListener(CloudStorageEvents.ChangedAuthStatus, handleCloudStorageChangedAuthStatus);
@@ -36,6 +43,12 @@ function ContinuousBackupCtrl(
 
 	function handleUpdateScope() {
     console.log('RecoveryCloudFileChooserCtrl handleUpdateScope');
+		$scope.$apply();
+	}
+
+	function handleCloudsStoragesInited() {
+		console.log('RecoveryCloudFileChooserCtrl handleCloudsStoragesInited');
+		$scope.bInited = true;
 		$scope.$apply();
 	}
 
