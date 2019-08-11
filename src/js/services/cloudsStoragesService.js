@@ -64,6 +64,12 @@ function CloudsStoragesServiceFactory($log, configService, isCordova) {
           console.log('CloudsStoragesServiceFactory cloudStorages init ERROR', err);
         });
     },
+    cloudStorages() {
+      return cloudStorages;
+    },
+    isInited() {
+      return cloudStorages.isInited;
+    },
     getSet() {
       return cloudStorages.getSet();
     },

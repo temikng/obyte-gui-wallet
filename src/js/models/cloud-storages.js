@@ -1,5 +1,6 @@
-class CloudStorages {
+class CloudStorages extends EventEmitter {
   constructor (options) {
+    super();
     this.log = options.log || function () {};
     this._storagesSet = {};
     this._arrKeys = [];
@@ -8,6 +9,7 @@ class CloudStorages {
     this._options = options;
     this._isCordova = options.isCordova;
     this._handleSaveData = options.handleSaveData;
+    this.isInited = false;
   }
 
   getSet() {
@@ -61,6 +63,11 @@ class CloudStorages {
         });
     }).listen(3000);
   }
+
+  _setInited() {
+    this.isInited = true;
+    this.emit(CloudStorageEvents.Inited);
+  }
   
   init() {
     if (this._initPromise) {
@@ -76,7 +83,10 @@ class CloudStorages {
         cloudStorage.on(CloudStorageEvents.DataChanged, this.saveData.bind(this));
         return cloudStorage.init(this._options);
       });
-    }, Promise.resolve());
+    }, Promise.resolve())
+      .then(() => {
+        this._setInited();
+      });
   }
 
   saveData() {
