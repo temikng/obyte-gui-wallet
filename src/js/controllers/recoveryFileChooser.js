@@ -12,8 +12,12 @@ function RecoveryFileChooserCtrl(
   $scope.cloudStorages = cloudsStoragesService.getSet();
   $scope.currCloudStorage;
   $scope.chooseList = [];
-  $scope.bLoading = false;
+  $scope.bLoading = !cloudsStoragesService.isInited();
   var elFileSelector;
+
+  if (!$scope.bLoading) {
+		cloudsStoragesService.cloudStorages().once(CloudStorageEvents.Inited, handleCloudsStoragesInited);
+	}
 
   for (const key in $scope.cloudStorages) {
 		const cloudStorage = $scope.cloudStorages[key];
@@ -22,6 +26,8 @@ function RecoveryFileChooserCtrl(
 	}
 
 	$scope.$on('$destroy', function () {
+    cloudsStoragesService.cloudStorages().removeListener(CloudStorageEvents.Inited, handleCloudsStoragesInited);
+
 		for (const key in $scope.cloudStorages) {
 			const cloudStorage = $scope.cloudStorages[key];
       cloudStorage.removeListener(CloudStorageEvents.ChangedAuthStatus, handleUpdateScope);
@@ -131,6 +137,12 @@ function RecoveryFileChooserCtrl(
 
 	function handleUpdateScope() {
     console.log('RecoveryFileChooserCtrl handleUpdateScope');
+		$scope.$apply();
+  }
+  
+  function handleCloudsStoragesInited() {
+		console.log('RecoveryFileChooserCtrl handleCloudsStoragesInited');
+		$scope.bLoading = true;
 		$scope.$apply();
 	}
 
