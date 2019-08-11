@@ -5,6 +5,7 @@ angular.module('copayApp.controllers').controller('preferencesGlobalController',
 	
 		var conf = require('ocore/conf.js');
   
+    $scope.conf = conf;
     $scope.encrypt = !!profileService.profile.xPrivKeyEncrypted;
     
     this.init = function() {

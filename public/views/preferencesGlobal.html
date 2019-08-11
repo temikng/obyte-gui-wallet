@@ -136,7 +136,7 @@
     </li>
   </ul>
 
-  <ul class="no-bullet m0">
+  <ul class="no-bullet m0" ng-if="conf.bLight">
     <li ng-click="$root.go('preferencesGlobal.continuousBackup')"  ng-hide="index.isPrivKeyExternal">
       <div class="right text-gray">
         <i class="icon-arrow-right3 size-24 text-gray"></i>
@@ -145,7 +145,7 @@
     </li>
   </ul>
 
-  <ul class="no-bullet m0">
+  <ul class="no-bullet m0" ng-if="conf.bLight">
     <li ng-click="$root.go('preferencesGlobal.recovery')"  ng-hide="index.isPrivKeyExternal">
       <div class="right text-gray">
         <i class="icon-arrow-right3 size-24 text-gray"></i>
