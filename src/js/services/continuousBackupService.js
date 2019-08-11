@@ -166,6 +166,9 @@ function ContinuousBackupServiceFactory(
 			backupCong.type = null;
 			return cb('Wrong cloud continuous backup config');
 		}
+		if (!cloudStorage.isInited) {
+			return cb(`CloudStorage ${backupCong.type} does not inited yet`);
+		}
 
 		var conf = require('ocore/conf');
 		var backupWallet;
