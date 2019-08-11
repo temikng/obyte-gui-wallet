@@ -27,14 +27,27 @@ class DropboxCloudStorage extends AbstractCloudStorage {
     super.init(options);
     this.DropboxModule = require('dropbox').Dropbox;
 
+    return this._init();
+  }
+
+  _init() {
     if (this.isAuthenticated()) {
-      console.log('DropboxCloudStorage init auth', this._accessTokenData);
+      console.log('DropboxCloudStorage _init auth', this._accessTokenData);
       this.initDropboxWithAccessToken();
       return this.loadAccountData()
         .then((accountData) => {
           this.setAccountData(accountData);
         })
         .catch((err) => {
+          console.log(`DropboxCloudStorage _init loadAccountData error, ${navigator.onLine}, err: `, err);
+          if (!navigator.onLine) {
+            return new Promise((resolve) => {
+              setTimeout(resolve, 3000);
+            })
+              .then(() => {
+                return this._init();
+              });
+          }
           this.initDropboxWithClientId();
           this.clearAuthData();
         })
@@ -43,7 +56,7 @@ class DropboxCloudStorage extends AbstractCloudStorage {
         });
     } else {
       this.initDropboxWithClientId();
-      console.log('DropboxCloudStorage init not auth');
+      console.log('DropboxCloudStorage _init not auth');
     }
     this._setInited();
     return Promise.resolve();
@@ -72,6 +85,11 @@ class DropboxCloudStorage extends AbstractCloudStorage {
     super.setAccessTokenData(data, bEmitEvent);
     console.log('DropboxCloudStorage setAccessTokenData', data, bEmitEvent);
     this.initDropboxWithAccessToken();
+  }
+
+  checkErrAuth(err) {
+    console.log('DropboxCloudStorage checkErrAuth', err.message);
+    return err.message === 'Invalid Credentials';
   }
 
   clearAuthData(bEmitEvent = true) {

@@ -309,8 +309,8 @@ class AbstractCloudStorage extends EventEmitter {
       console.log('CloudStorage execWithCheckAuth auth');
       return fn()
         .catch((err) => {
-          console.log('CloudStorage exec fn ERROR:', err);
-          if (this.checkErrAuth(err)) {
+          console.log(`CloudStorage exec fn, ${navigator.onLine}, ERROR: ${err}`);
+          if (navigator.onLine && this.checkErrAuth(err)) {
             this.clearAuthData();
             throw new ErrorCloudStorageNotAuth();
           }
